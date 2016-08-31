@@ -1,6 +1,6 @@
 // scraper.go consumes an intial webpage and some linked-to webpages,
-// processes some data obtained and presents that data in a specified
-// format.
+// processes data obtained and and writes some of that data in a prescribed
+// format to standard output.
 package main
 
 import (
@@ -34,7 +34,7 @@ type productDisplay struct {
 
 type scraperDisplay struct {
 	Results *[]productDisplay `json:"results"`
-	Total   json.Number      `json:"total"`
+	Total   json.Number       `json:"total"`
 }
 
 func main() {
@@ -133,7 +133,7 @@ func scrapeInfo(s *goquery.Selection, c chan product, ppr productPageReader, df 
 }
 
 // iterateProducts takes a slice of products and outputs cumulative unit price
-// and a pointer to a slice of productDisplay structs.
+// and a pointer to a slice of appropriately-populated productDisplay structs.
 func iterateProducts(products []product) (float32, *[]productDisplay) {
 	var totalPrice float32
 	var d []productDisplay

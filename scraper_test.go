@@ -1,8 +1,8 @@
 package main
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -26,8 +26,8 @@ func TestFloatifyPrice(t *testing.T) {
 }
 
 var fakeHtmlString = "<html><head><title>Apricot Ripe</title>" +
-    "<meta name=\"description\" content=\"Buy Sainsbury&#39;s!\"/>" +
-    "<meta name=\"keyword\" content=\"blank\"/></head><body></body></html>"
+	"<meta name=\"description\" content=\"Buy Sainsbury&#39;s!\"/>" +
+	"<meta name=\"keyword\" content=\"blank\"/></head><body></body></html>"
 
 func stubDocFetcher(s string) *goquery.Document {
 	fakeHtmlReader := strings.NewReader(fakeHtmlString)
@@ -109,23 +109,23 @@ func TestDisplaySize(t *testing.T) {
 }
 
 func TestToJSON(t *testing.T) {
-  product1 := product{
-    title:       "hi",
-    unitPrice:   3.5,
-    pageSize:    42000,
-    description: "life, etc.",
-  }
+	product1 := product{
+		title:       "hi",
+		unitPrice:   3.5,
+		pageSize:    42000,
+		description: "life, etc.",
+	}
 
-  product2 := product{
-    title:       "hiya & lowa",
-    unitPrice:   3.6,
-    pageSize:    4200,
-    description: "life, the etc.",
-  }
+	product2 := product{
+		title:       "hiya & lowa",
+		unitPrice:   3.6,
+		pageSize:    4200,
+		description: "life, the etc.",
+	}
 
-  products := []product{product1, product2}
+	products := []product{product1, product2}
 
-  expectedJSON := `{
+	expectedJSON := `{
     "results": [
         {
             "title": "hi",
@@ -143,9 +143,9 @@ func TestToJSON(t *testing.T) {
     "total": 7.10
 }
 `
-  actualJSON := toJSON(products)
+	actualJSON := toJSON(products)
 
-  if actualJSON != expectedJSON {
-    t.Errorf("whoops: expected %s, actual %s", expectedJSON, actualJSON)
-  }
+	if actualJSON != expectedJSON {
+		t.Errorf("whoops: expected %s, actual %s", expectedJSON, actualJSON)
+	}
 }
