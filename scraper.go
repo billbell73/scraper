@@ -26,16 +26,18 @@ type product struct {
 	description string
 }
 
+type price float32
+
 type productDisplay struct {
-	Title       string      `json:"title"`
-	PageSize    string      `json:"size"`
-	UnitPrice   json.Number `json:"unit_price"`
-	Description string      `json:"description"`
+	Title       string `json:"title"`
+	PageSize    string `json:"size"`
+	UnitPrice   price  `json:"unit_price"`
+	Description string `json:"description"`
 }
 
 type scraperDisplay struct {
 	Results *[]productDisplay `json:"results"`
-	Total   json.Number       `json:"total"`
+	Total   price             `json:"total"`
 }
 
 func main() {
@@ -145,7 +147,7 @@ func iterateProducts(products []product) (float32, *[]productDisplay) {
 		pd := productDisplay{
 			Title:       product.title,
 			PageSize:    displaySize(product.pageSize),
-			UnitPrice:   displayPrice(product.unitPrice),
+			UnitPrice:   price(product.unitPrice),
 			Description: product.description,
 		}
 		d = append(d, pd)
@@ -165,17 +167,8 @@ func roundToOneDecPlace(f float64) float64 {
 	return roundedtimesTen / 10
 }
 
-func displayPrice(price float32) json.Number {
-	twoDecPlacesString := fmt.Sprintf("%.2f", price)
-
-	dec := json.NewDecoder(strings.NewReader(twoDecPlacesString))
-	var x json.Number
-	dec.Decode(&x)
-	return x
-}
-
-// toJSON takes a slice of products and outputs a json string
-// containing info about the products in the specified format.
+// toJSON takes a slice of products and an io.Writer, and gets the writer to
+// output JSON-formatted info in the prescribed form about the products.
 func toJSON(products []product, w io.Writer) {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
@@ -185,9 +178,13 @@ func toJSON(products []product, w io.Writer) {
 
 	err := enc.Encode(scraperDisplay{
 		Results: results,
-		Total:   displayPrice(totalPrice),
+		Total:   price(totalPrice),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (p price) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%.2f", p)), nil
 }
