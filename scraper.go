@@ -4,11 +4,12 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -53,7 +54,7 @@ func main() {
 		products = append(products, <-c)
 	}
 
-	fmt.Printf("%v", toJSON(products))
+	toJSON(products, os.Stdout)
 }
 
 func fetchDoc(dest string) *goquery.Document {
@@ -175,9 +176,8 @@ func displayPrice(price float32) json.Number {
 
 // toJSON takes a slice of products and outputs a json string
 // containing info about the products in the specified format.
-func toJSON(products []product) string {
-	buf := new(bytes.Buffer)
-	enc := json.NewEncoder(buf)
+func toJSON(products []product, w io.Writer) {
+	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "    ")
 
@@ -190,6 +190,4 @@ func toJSON(products []product) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return buf.String()
 }

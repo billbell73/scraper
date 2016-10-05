@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -143,7 +144,11 @@ func TestToJSON(t *testing.T) {
     "total": 7.10
 }
 `
-	actualJSON := toJSON(products)
+
+	buf := new(bytes.Buffer)
+	toJSON(products, buf)
+
+	actualJSON := buf.String()
 
 	if actualJSON != expectedJSON {
 		t.Errorf("whoops: expected %s, actual %s", expectedJSON, actualJSON)
