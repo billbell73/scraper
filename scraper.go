@@ -45,11 +45,11 @@ func main() {
 	c := make(chan product)
 
 	doc.Find(".product ").Each(func(i int, s *goquery.Selection) {
-		numberProducts = i
+		numberProducts++
 		go scrapeInfo(s, c, readProductPage, fetchDoc)
 	})
 
-	for j := 0; j <= numberProducts; j++ {
+	for j := 0; j < numberProducts; j++ {
 		products = append(products, <-c)
 	}
 
