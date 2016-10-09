@@ -19,25 +19,19 @@ import (
 
 const webAddress string = "http://hiring-tests.s3-website-eu-west-1.amazonaws.com/2015_Developer_Scrape/5_products.html"
 
-type product struct {
-	title       string
-	unitPrice   float32
-	pageSize    int
-	description string
-}
-
 type price float32
+type pageSize int
 
-type productDisplay struct {
-	Title       string `json:"title"`
-	PageSize    string `json:"size"`
-	UnitPrice   price  `json:"unit_price"`
-	Description string `json:"description"`
+type product struct {
+	Title       string   `json:"title"`
+	PageSize    pageSize `json:"size"`
+	UnitPrice   price    `json:"unit_price"`
+	Description string   `json:"description"`
 }
 
 type scraperDisplay struct {
-	Results *[]productDisplay `json:"results"`
-	Total   price             `json:"total"`
+	Results []product `json:"results"`
+	Total   price     `json:"total"`
 }
 
 func main() {
@@ -67,27 +61,10 @@ func fetchDoc(dest string) *goquery.Document {
 	return doc
 }
 
-func floatifyPrice(s string) float32 {
-	re := regexp.MustCompile("[0-9]+.[0-9]+")
-	price := re.FindString(s)
-
-	if price == "" {
-		var empty float32
-		return empty
-	}
-
-	f64, err := strconv.ParseFloat(price, 32)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return float32(f64)
-}
-
 // readProductPage uses passed docFetcher function to get webpage at passed url
-// and returns the size of the fetched html in bytes and the string 'content'
+// and returns the size in bytes of the fetched html and the string 'content'
 // value of a meta tag with 'name' attribute of "description".
-func readProductPage(dest string, fn docFetcher) (int, string) {
+func readProductPage(dest string, fn docFetcher) (pageSize, string) {
 	linkedDoc := fn(dest)
 
 	var description string
@@ -99,7 +76,9 @@ func readProductPage(dest string, fn docFetcher) (int, string) {
 		}
 	})
 
-	return sizeOf(linkedDoc), description
+	size := sizeOf(linkedDoc)
+
+	return pageSize(size), description
 }
 
 func sizeOf(doc *goquery.Document) int {
@@ -112,7 +91,7 @@ func sizeOf(doc *goquery.Document) int {
 }
 
 type docFetcher func(string) *goquery.Document
-type productPageReader func(string, docFetcher) (int, string)
+type productPageReader func(string, docFetcher) (pageSize, string)
 
 // scrapeInfo extracts info on a product from a passed goquery selection,
 // calls a productPageReader method to get further info and then populates
@@ -127,44 +106,29 @@ func scrapeInfo(s *goquery.Selection, c chan product, ppr productPageReader, df 
 	size, description := ppr(destination, df)
 
 	p := product{
-		title:       strings.TrimSpace(rawTitle),
-		unitPrice:   floatifyPrice(rawPrice),
-		pageSize:    size,
-		description: description}
+		Title:       strings.TrimSpace(rawTitle),
+		PageSize:    size,
+		UnitPrice:   floatifyPrice(rawPrice),
+		Description: description}
 
 	c <- p
 }
 
-// iterateProducts takes a slice of products and outputs cumulative unit price
-// and a pointer to a slice of appropriately-populated productDisplay structs.
-func iterateProducts(products []product) (float32, *[]productDisplay) {
-	var totalPrice float32
-	var d []productDisplay
+func floatifyPrice(s string) price {
+	re := regexp.MustCompile("[0-9]+.[0-9]+")
+	stringPrice := re.FindString(s)
 
-	for _, product := range products {
-		totalPrice += product.unitPrice
-
-		pd := productDisplay{
-			Title:       product.title,
-			PageSize:    displaySize(product.pageSize),
-			UnitPrice:   price(product.unitPrice),
-			Description: product.description,
-		}
-		d = append(d, pd)
+	if stringPrice == "" {
+		var empty price
+		return empty
 	}
-	return totalPrice, &d
-}
 
-func displaySize(size int) string {
-	sizeInKB := float64(size) / 1000
-	rounded := roundToOneDecPlace(sizeInKB)
-	return fmt.Sprintf("%v", rounded) + "kb"
-}
+	f64, err := strconv.ParseFloat(stringPrice, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-func roundToOneDecPlace(f float64) float64 {
-	timesTen := f * 10
-	roundedtimesTen := math.Floor(timesTen + 0.5)
-	return roundedtimesTen / 10
+	return price(f64)
 }
 
 // toJSON takes a slice of products and an io.Writer, and gets the writer to
@@ -174,17 +138,38 @@ func toJSON(products []product, w io.Writer) {
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "    ")
 
-	totalPrice, results := iterateProducts(products)
+	total := totalPrice(products)
 
 	err := enc.Encode(scraperDisplay{
-		Results: results,
-		Total:   price(totalPrice),
+		Results: products,
+		Total:   total,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
+func totalPrice(products []product) price {
+	var total price
+
+	for _, product := range products {
+		total += product.UnitPrice
+	}
+	return total
+}
+
 func (p price) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%.2f", p)), nil
+}
+
+func (p pageSize) MarshalText() ([]byte, error) {
+	sizeInKB := float64(p) / 1000
+	rounded := roundToOneDecPlace(sizeInKB)
+	return []byte(fmt.Sprintf("%vkb", rounded)), nil
+}
+
+func roundToOneDecPlace(f float64) float64 {
+	timesTen := f * 10
+	roundedtimesTen := math.Floor(timesTen + 0.5)
+	return roundedtimesTen / 10
 }

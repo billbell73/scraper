@@ -11,7 +11,7 @@ import (
 func TestFloatifyPrice(t *testing.T) {
 	var floatifyPriceTests = []struct {
 		s        string
-		expected float32
+		expected price
 	}{
 		{"\n£1.50/unit\n", 1.5},
 		{"\n£2.54/unit\n", 2.54},
@@ -26,19 +26,19 @@ func TestFloatifyPrice(t *testing.T) {
 	}
 }
 
-var fakeHtmlString = "<html><head><title>Apricot Ripe</title>" +
+var fakeHTMLString = "<html><head><title>Apricot Ripe</title>" +
 	"<meta name=\"description\" content=\"Buy Sainsbury&#39;s!\"/>" +
 	"<meta name=\"keyword\" content=\"blank\"/></head><body></body></html>"
 
 func stubDocFetcher(s string) *goquery.Document {
-	fakeHtmlReader := strings.NewReader(fakeHtmlString)
-	doc, _ := goquery.NewDocumentFromReader(fakeHtmlReader)
+	fakeHTMLReader := strings.NewReader(fakeHTMLString)
+	doc, _ := goquery.NewDocumentFromReader(fakeHTMLReader)
 	return doc
 }
 
 func TestReadProductPage(t *testing.T) {
 	actualSize, actualDesc := readProductPage("", stubDocFetcher)
-	expectedSize := len(fakeHtmlString)
+	expectedSize := pageSize(len(fakeHTMLString))
 	if actualSize != expectedSize {
 		t.Errorf("whoops: expected %d, actual %d", expectedSize, actualSize)
 	}
@@ -47,25 +47,25 @@ func TestReadProductPage(t *testing.T) {
 	}
 }
 
-func stubProductPageReader(s string, fn docFetcher) (int, string) {
+func stubProductPageReader(s string, fn docFetcher) (pageSize, string) {
 	return 42, "life, etc."
 }
 
 func TestScrapeInfo(t *testing.T) {
-	fakeHtmlString2 := "<a href=\"example.com\">hi</a>" +
+	fakeHTMLString2 := "<a href=\"example.com\">hi</a>" +
 		"<p class=\"pricePerUnit\">£3.50</p>"
-	fakeHtmlReader2 := strings.NewReader(fakeHtmlString2)
-	doc2, _ := goquery.NewDocumentFromReader(fakeHtmlReader2)
+	fakeHTMLReader2 := strings.NewReader(fakeHTMLString2)
+	doc2, _ := goquery.NewDocumentFromReader(fakeHTMLReader2)
 
 	ch := make(chan product)
 	go scrapeInfo(doc2.Selection, ch, stubProductPageReader, stubDocFetcher)
 	actualProduct := <-ch
 
 	expectedProduct := product{
-		title:       "hi",
-		unitPrice:   3.5,
-		pageSize:    42,
-		description: "life, etc.",
+		Title:       "hi",
+		UnitPrice:   3.5,
+		PageSize:    42,
+		Description: "life, etc.",
 	}
 
 	if actualProduct != expectedProduct {
@@ -91,9 +91,9 @@ func TestRoundToOneDecPlace(t *testing.T) {
 	}
 }
 
-func TestDisplaySize(t *testing.T) {
-	var displaySizeTests = []struct {
-		size     int
+func TestPageSizeMarshallText(t *testing.T) {
+	var sizeMarshallTests = []struct {
+		size     pageSize
 		expected string
 	}{
 		{40000, "40kb"},
@@ -101,27 +101,27 @@ func TestDisplaySize(t *testing.T) {
 		{541040, "541kb"},
 	}
 
-	for _, dst := range displaySizeTests {
-		actual := displaySize(dst.size)
-		if actual != dst.expected {
-			t.Errorf("roundingTests(%q): expected %g, actual %g", dst.size, dst.expected, actual)
+	for _, smt := range sizeMarshallTests {
+		actual, _ := smt.size.MarshalText()
+		if string(actual) != smt.expected {
+			t.Errorf("roundingTests(%q): expected %g, actual %g", smt.size, smt.expected, actual)
 		}
 	}
 }
 
 func TestToJSON(t *testing.T) {
 	product1 := product{
-		title:       "hi",
-		unitPrice:   3.5,
-		pageSize:    42000,
-		description: "life, etc.",
+		Title:       "hi",
+		PageSize:    42000,
+		UnitPrice:   3.5,
+		Description: "life, etc.",
 	}
 
 	product2 := product{
-		title:       "hiya & lowa",
-		unitPrice:   3.6,
-		pageSize:    4200,
-		description: "life, the etc.",
+		Title:       "hiya & lowa",
+		PageSize:    4200,
+		UnitPrice:   3.6,
+		Description: "life, the etc.",
 	}
 
 	products := []product{product1, product2}
